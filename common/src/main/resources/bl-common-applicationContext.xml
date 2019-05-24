@@ -156,10 +156,7 @@
             </props>
         </property>
     </bean>
-    
-    <bean id="blSpringCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
-        <property name="cacheManager" ref="blCacheManager"/>
-    </bean>    
+
     
     <bean id="messageSource" class="org.broadleafcommerce.common.util.BroadleafMergeResourceBundleMessageSource">
         <property name="useCodeAsDefaultMessage" value="${messages.useCodeAsDefaultMessage}" />

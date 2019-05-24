@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -51,6 +52,7 @@ import javax.servlet.http.HttpServletRequest;
  * @since Broadleaf 4.0
  */
 @Component("blCacheResourceResolver")
+@DependsOn("cacheManager")
 public class BroadleafCachingResourceResolver extends AbstractResourceResolver implements Ordered {
 
     public static final String RESOLVED_RESOURCE_CACHE_KEY_PREFIX = "resolvedResource:";
@@ -62,9 +64,6 @@ public class BroadleafCachingResourceResolver extends AbstractResourceResolver i
 
     private final Cache cache;
 
-    @javax.annotation.Resource(name = "blSpringCacheManager")
-    private CacheManager cacheManager;
-
     @javax.annotation.Resource(name = "blBroadleafContextUtil")
     protected BroadleafContextUtil blcContextUtil;
     
@@ -74,7 +73,7 @@ public class BroadleafCachingResourceResolver extends AbstractResourceResolver i
     protected boolean resourceCachingEnabled;
 
     @Autowired
-    public BroadleafCachingResourceResolver(@Qualifier("blSpringCacheManager") CacheManager cacheManager) {
+    public BroadleafCachingResourceResolver(CacheManager cacheManager) {
         this(cacheManager.getCache(DEFAULT_CACHE_NAME));
     }
 
@@ -155,7 +154,7 @@ public class BroadleafCachingResourceResolver extends AbstractResourceResolver i
             String response = null;
 
             String notFoundKey = RESOLVED_URL_PATH_CACHE_KEY_PREFIX_NULL + resourceUrlPath + getThemePathFromBRC();
-            Object nullResource = getCache().get(notFoundKey, Object.class);
+            Object nullResource = getCache().get(notFoundKey);
             if (nullResource != null) {
                 logNullReferenceUrlPatchMatch(resourceUrlPath);
                 return null;

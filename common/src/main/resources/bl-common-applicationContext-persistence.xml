@@ -30,7 +30,7 @@
 
     <tx:annotation-driven/>
 
-    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean" depends-on="blCacheManager" primary="true">
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean" primary="true">
         <property name="jpaVendorAdapter" ref="blJpaVendorAdapter"/>
         <property name="persistenceUnitManager" ref="blPersistenceUnitManager"/>
         <property name="persistenceUnitName" value="blPU"/>
@@ -87,8 +87,7 @@
         </property>
     </bean>
 
-    
-    <bean id="blCacheManager" class="org.broadleafcommerce.common.extensibility.cache.ehcache.MergeEhCacheManagerFactoryBean"/>
+
 
     <bean id="blMergedCacheConfigLocations" class="org.springframework.beans.factory.config.ListFactoryBean">
         <property name="sourceList">
