@@ -46,13 +46,14 @@ public class HydratedCacheEventListenerFactory {
                                              @Value("${cache.hydratedCache.names}") List<String> cacheNames,
                                              @Value("${cache.hydratedCache.require.old.value:false}") Boolean oldValue,
                                              @Value("${cache.hydratedCache.require.synchronous:true}") Boolean synchronous) {
-        for (String cacheName : cacheNames) {
-            CachingProvider provider = Caching.getCachingProvider();
-            CacheManager cacheManager = provider.getCacheManager();
-            Cache cache = cacheManager.getCache(cacheName);
-            cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration(FactoryBuilder.factoryOf(hydratedCacheManager), null, oldValue, synchronous));
-        }
-        manager = hydratedCacheManager;
+        // TODO 6.1 ehcache 3 should we attach the listeners here?
+//        for (String cacheName : cacheNames) {
+//            CachingProvider provider = Caching.getCachingProvider();
+//            CacheManager cacheManager = provider.getCacheManager();
+//            Cache cache = cacheManager.getCache(cacheName);
+//            cache.registerCacheEntryListener(new MutableCacheEntryListenerConfiguration(FactoryBuilder.factoryOf(hydratedCacheManager), null, oldValue, synchronous));
+//        }
+//        manager = hydratedCacheManager;
     }
 
     public static HydratedCacheManager getConfiguredManager() {
