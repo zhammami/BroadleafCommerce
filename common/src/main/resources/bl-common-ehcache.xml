@@ -25,7 +25,7 @@
         <jsr107:defaults enable-management="true" enable-statistics="true"/> 
     </service>
     
-    <persistence directory="${java.io.tmpdir}"/>
+    <persistence directory="${java.io.tmpdir}/cache"/>
     
     <cache-template name="hydratedCacheTemplate">
         <listeners>
