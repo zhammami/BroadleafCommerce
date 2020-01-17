@@ -1,3 +1,3 @@
-@Library('broadleaf-jenkins-pipeline-library@ci-always-check-dependencies') _
+@Library('broadleaf-jenkins-pipeline-library@pr_testing') _
 properties(commonModuleJobProps())
 buildBroadleafModule(params)
