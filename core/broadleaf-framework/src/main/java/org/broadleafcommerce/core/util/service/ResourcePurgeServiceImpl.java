@@ -31,10 +31,31 @@ import org.broadleafcommerce.core.util.service.type.PurgeCartVariableNames;
 import org.broadleafcommerce.core.util.service.type.PurgeCustomerVariableNames;
 import org.broadleafcommerce.profile.core.domain.Customer;
 import org.broadleafcommerce.profile.core.service.CustomerService;
+import org.hibernate.Session;
+import org.hibernate.jdbc.Work;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.annotation.Resource;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 /**
  * Service capable of deleting old or defunct entities from the persistence layer (e.g. Carts and anonymous Customers).
@@ -95,6 +116,15 @@ public class ResourcePurgeServiceImpl implements ResourcePurgeService {
     @Resource(name = "blCustomerService")
     protected CustomerService customerService;
 
+    @Resource(name = "blcDeleteStatementGenerator")
+    protected DeleteStatementGenerator deleteStatementGenerator;
+
+    @Autowired
+    protected Environment env;
+
+    @PersistenceContext(unitName = "blPU")
+    protected EntityManager em;
+
     @Override
     public void purgeCarts(final Map<String, String> config) {
         if (LOG.isDebugEnabled()) {
@@ -128,6 +158,62 @@ public class ResourcePurgeServiceImpl implements ResourcePurgeService {
         }
         LOG.info(String.format("Cart purge batch processed.  Purged %d from total batch size of %d, %d failures cached", processedCount, batchCount, cartPurgeErrors.size()));
     }
+
+    @Override
+    public void purgeHistory(Class<?> rootType, String rootTypeIdValue) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Purging history");
+        }
+
+        String enablePurge = env.getProperty("enable.purge");
+
+        if (!Boolean.parseBoolean(enablePurge)) {
+            LOG.info("Save protection. Purging history is off. Please set property enable.purge to true.");
+            return;
+        }
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy.dd.MM");
+        String dateStr = env.getProperty("date.str");
+        String dateEnd = env.getProperty("date.end");
+
+        try {
+            Date startDate = formatter.parse(dateStr);
+            Date endDate = formatter.parse(dateEnd);
+
+            List<Order> ordersByDateRange = orderService.findOrdersByDateRange(startDate, endDate);
+            final Map<String, DeleteStatementGeneratorImpl.PathElement> dependencies = new HashMap<>();
+            dependencies.put("BLC_FULFILLMENT_ORDER", new DeleteStatementGeneratorImpl.PathElement("BLC_FULFILL_PAYMENT_LOG","FULFILLMENT_ORDER_ID","FULFILLMENT_ORDER_ID"));
+            final Map<String, String> deleteStatement = deleteStatementGenerator.generateDeleteStatementsForType(OrderImpl.class, "?", dependencies);
+            for (final Order order : ordersByDateRange) {
+                TransactionStatus status = TransactionUtils.createTransaction("Cart Purge",
+                        TransactionDefinition.PROPAGATION_REQUIRED, transactionManager, false);
+                try {
+                    em.unwrap(Session.class).doWork(new Work() {
+                        @Override
+                        public void execute(Connection connection) throws SQLException {
+                            Statement statement = connection.createStatement();
+                            for (String value : deleteStatement.values()) {
+                                String sql = value.replace("?", String.valueOf(order.getId()));
+                                statement.addBatch(sql);
+                            }
+                            statement.executeBatch();
+                        }
+                    });
+                    TransactionUtils.finalizeTransaction(status, transactionManager, false);
+                } catch (Exception e) {
+                    if (!status.isCompleted()) {
+                        TransactionUtils.finalizeTransaction(status, transactionManager, true);
+                    }
+                    LOG.error(String.format("Not able to purge Cart ID: %d", order.getId()), e);
+                }
+            }
+
+        } catch (ParseException e) {
+            LOG.debug("Wrong date format");
+        }
+    }
+
 
     @Override
     public void purgeCustomers(final Map<String, String> config) {
