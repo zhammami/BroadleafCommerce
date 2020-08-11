@@ -223,7 +223,7 @@ public class StructuredContentTypeCustomPersistenceHandler extends CustomPersist
                 md.put(property.getName(), property.getMetadata());
             }
             
-            boolean validated = helper.validate(persistencePackage.getEntity(), null, md);
+            boolean validated = helper.validate(persistencePackage.getEntity(), new StructuredContentTypeImpl(), md);
             if (!validated) {
                 throw new ValidationException(persistencePackage.getEntity(), "Structured Content dynamic fields failed validation");
             }
@@ -239,7 +239,7 @@ public class StructuredContentTypeCustomPersistenceHandler extends CustomPersist
             Map<String, StructuredContentFieldXref> structuredContentFieldMap =
                     structuredContent.getStructuredContentFieldXrefs();
             for (Property property : persistencePackage.getEntity().getProperties()) {
-                if (templateFieldNames.contains(property.getName())) {
+                if (property.getEnabled() && templateFieldNames.contains(property.getName())) {
                     StructuredContentFieldXref scXref = structuredContentFieldMap.get(property.getName());
                     if (scXref != null && scXref.getStructuredContentField() != null) {
                         StructuredContentField structuredContentField = scXref.getStructuredContentField();

@@ -20,10 +20,34 @@
 
     var excludedEFSectionTabSelectors = [];
 
-    var originalStickyBarOffset = $('.sticky-container').offset().top;
-    var originalStickyBarHeight = $('.sticky-container').height();
+    var originalStickyBarOffset;
+    var originalStickyBarHeight;
     
     BLCAdmin.entityForm = {
+
+        initializeStickyHeader : function () {
+            originalStickyBarOffset = $('.sticky-container').offset().top;
+            originalStickyBarHeight = $('.sticky-container').height();
+
+            if ($('form.entity-form').length && !$('.oms').length) {
+                var $sc = $('.sticky-container');
+                var $scp = $('.sticky-container-padding');
+                var height = BLCAdmin.entityForm.getOriginalStickyBarHeight();
+
+                $scp.show();
+                $sc.addClass('sticky-fixed').css('top', BLCAdmin.entityForm.getOriginalStickyBarOffset());
+                $sc.outerWidth($('.main-content').outerWidth());
+                $scp.outerHeight(height);
+
+                $sc.find('.content-area-title-bar').css('height', height);
+                $sc.find('.content-area-title-bar').css('line-height', height + 'px');
+                $sc.find('.content-area-title-bar h3:not(.line-height-fixed)').css('line-height', height + 'px');
+                $sc.find('.content-area-title-bar .dropdown-menu').css('margin-top', '-22px');
+            }
+
+            $('.main-content').css('overflow', 'auto');
+        },
+
         showActionSpinner : function ($actions) {
             $("#headerFlashAlertBoxContainer").addClass("hidden");
             $actions.find('button').prop("disabled",true);
@@ -45,8 +69,10 @@
         /**
          * Should happen after the AJAX request completes
          */
-        hideActionSpinner : function () {
-            var $actions = $('.entity-form-actions');
+        hideActionSpinner : function ($actions) {
+            if (!$actions || !$actions.length) {
+                $actions = $('.entity-form-actions');
+            }
             $actions.find('button').prop("disabled",false);
             $actions.find('img.ajax-loader').hide();
         },
@@ -54,7 +80,9 @@
         showErrors : function (data, alertMessage) {
             $.each( data.errors , function( idx, error ){
                 if (error.errorType == "field") {
-                    var fieldGroup = $("#field-" + error.field);
+                    // escape the | character from dynamic form fields for jquery to be able to process
+                    // replace all '|' and ' ' characters with '-'
+                    var fieldGroup = $("#field-" + (error.field).replace(/\|/g, "-").replace(/ /g, "-"));
                     if (BLCAdmin.currentModal() !== undefined) {
                         fieldGroup = BLCAdmin.currentModal().find("#field-" + error.field);
                     }
@@ -240,6 +268,8 @@
 
 $(document).ready(function() {
 
+    BLCAdmin.entityForm.initializeStickyHeader();
+
     /**
      * Make the sticky bar (breadcrumb) lock at the top of the window when it's scrolled off the page
      */
@@ -272,25 +302,6 @@ $(document).ready(function() {
             $sc.find('.content-area-title-bar .dropdown-menu').css('margin-top', '-7px');
         }
     });
-
-    /**
-     * Initialize the sticky bar
-     */
-    if ($('form.entity-form').length && !$('.oms').length) {
-        var $sc = $('.sticky-container');
-        var $scp = $('.sticky-container-padding');
-        var height = BLCAdmin.entityForm.getOriginalStickyBarHeight();
-
-        $scp.show();
-        $sc.addClass('sticky-fixed').css('top', BLCAdmin.entityForm.getOriginalStickyBarOffset());
-        $sc.outerWidth($('.main-content').outerWidth());
-        $scp.outerHeight(height);
-
-        $sc.find('.content-area-title-bar').css('height', height);
-        $sc.find('.content-area-title-bar').css('line-height', height + 'px');
-        $sc.find('.content-area-title-bar h3:not(.line-height-fixed)').css('line-height', height + 'px');
-        $sc.find('.content-area-title-bar .dropdown-menu').css('margin-top', '-22px');
-    }
     
     var tabs_action=null;
     $('body div.section-tabs li').find('a:not(".workflow-tab, .system-property-tab' +
@@ -303,33 +314,33 @@ $(document).ready(function() {
         var currentAction = $form.attr('action');
         var tabUrl = encodeURI(currentAction + '/1/' + tabKey);
 
-     	if (tabs_action && tabs_action.indexOf(tabUrl + '++') == -1 && tabs_action.indexOf(tabUrl) >= 0) {
-     		tabs_action = tabs_action.replace(tabUrl, tabUrl + '++');
-     	} else if (tabs_action && tabs_action.indexOf(tabUrl) == -1) {
-     		tabs_action += ' / ' + tabUrl;
-     	} else if (tabs_action == null) {
-     		tabs_action = tabUrl;
-     	}
+        if (tabs_action && tabs_action.indexOf(tabUrl + '++') == -1 && tabs_action.indexOf(tabUrl) >= 0) {
+            tabs_action = tabs_action.replace(tabUrl, tabUrl + '++');
+        } else if (tabs_action && tabs_action.indexOf(tabUrl) == -1) {
+            tabs_action += ' / ' + tabUrl;
+        } else if (tabs_action == null) {
+            tabs_action = tabUrl;
+        }
 
-     	if (tabs_action.indexOf(tabUrl + '++') == -1 && !$tab.hasClass('first-tab')) {
+        if (tabs_action.indexOf(tabUrl + '++') == -1 && !$tab.hasClass('first-tab')) {
             showTabSpinner($tab, $tabBody);
 
-     		BLC.ajax({
-     			url: tabUrl,
-     			type: "POST",
-     			data: $form.serializeArray()
-     		}, function(data) {
-     			$('div.' + href + 'Tab .listgrid-container').find('.listgrid-header-wrapper table').each(function() {
-     				var tableId = $(this).attr('id').replace('-header', '');
+            BLC.ajax({
+                url: tabUrl,
+                type: "POST",
+                data: $form.serializeArray()
+            }, function(data) {
+                $('div.' + href + 'Tab .listgrid-container').find('.listgrid-header-wrapper table').each(function() {
+                    var tableId = $(this).attr('id').replace('-header', '');
                     var $tableWrapper = data.find('.listgrid-header-wrapper:has(table#' + tableId + ')');
-     				BLCAdmin.listGrid.replaceRelatedCollection($tableWrapper);
+                    BLCAdmin.listGrid.replaceRelatedCollection($tableWrapper);
                     BLCAdmin.listGrid.updateGridTitleBarSize($(this).closest('.listgrid-container').find('.fieldgroup-listgrid-wrapper-header'));
-     			});
-     			$('div.' + href + 'Tab .selectize-wrapper').each(function() {
-     				var tableId = $(this).attr('id');
+                });
+                $('div.' + href + 'Tab .selectize-wrapper').each(function() {
+                    var tableId = $(this).attr('id');
                     var $selectizeWrapper = data.find('.selectize-wrapper#' + tableId);
-     				BLCAdmin.listGrid.replaceRelatedCollection($selectizeWrapper);
-     			});
+                    BLCAdmin.listGrid.replaceRelatedCollection($selectizeWrapper);
+                });
                 $('div.' + href + 'Tab .media-container').each(function() {
                     var tableId = $(this).attr('id');
                     tableId = tableId.replace(".", "\\.");
@@ -343,11 +354,11 @@ $(document).ready(function() {
                 });
 
                 hideTabSpinner($tab, $tabBody);
-     		});
+            });
 
-     		event.preventDefault();
+            event.preventDefault();
 
-     	}
+        }
      });
 
 
@@ -448,7 +459,7 @@ $(document).ready(function() {
     }
 
     function hideTabSpinner($tab, $tabBody) {
-        $tabBody.find('button:not(.row-action)').prop("disabled", false);
+        $tabBody.find('button:not(.read-only, .row-action)').prop("disabled", false);
         $tab.find('i.fa-spinner').hide();
     }
 
