@@ -55,6 +55,10 @@ import javax.persistence.Table;
 })
 public class DataDrivenEnumerationValueImpl implements DataDrivenEnumerationValue {
 
+    static {
+        Thread.dumpStack();
+    }
+
     private static final long serialVersionUID = 1L;
 
     @Id

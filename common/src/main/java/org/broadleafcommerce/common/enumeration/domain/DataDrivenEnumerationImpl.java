@@ -59,6 +59,10 @@ public class DataDrivenEnumerationImpl implements DataDrivenEnumeration {
 
     private static final long serialVersionUID = 1L;
 
+    static {
+        Thread.dumpStack();
+    }
+
     @Id
     @GeneratedValue(generator = "DataDrivenEnumerationId")
     @GenericGenerator(

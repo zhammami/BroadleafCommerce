@@ -21,11 +21,20 @@
 
 package org.broadleafcommerce.common.config;
 
+import org.broadleafcommerce.common.extensibility.jpa.convert.BroadleafClassTransformer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.weaving.LoadTimeWeaverAware;
+import org.springframework.instrument.classloading.LoadTimeWeaver;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+
+import java.lang.instrument.ClassFileTransformer;
+import java.util.Set;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 
 /**
  * Main configuration class for the broadleaf-common module
@@ -33,7 +42,12 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
  * @author Phillip Verheyden (phillipuniverse)
  */
 @Configuration
-public class BroadleafCommonConfig {
+public class BroadleafCommonConfig implements LoadTimeWeaverAware {
+
+    LoadTimeWeaver loadTimeWeaver;
+
+    @Resource(name = "blMergedClassTransformers")
+    protected Set<BroadleafClassTransformer> mergedClassTransformers;
 
     /**
      * Other enterprise/mulititenant modules override this adapter to provide one that supports dynamic filtration
@@ -45,4 +59,15 @@ public class BroadleafCommonConfig {
         return vendorAdapter;
     }
 
+    @Override
+    public void setLoadTimeWeaver(LoadTimeWeaver loadTimeWeaver) {
+        this.loadTimeWeaver = loadTimeWeaver;
+    }
+
+    @PostConstruct
+    public void postConstruct() {
+        for (BroadleafClassTransformer transformer : mergedClassTransformers) {
+            loadTimeWeaver.addTransformer((ClassFileTransformer) transformer);
+        }
+    }
 }
